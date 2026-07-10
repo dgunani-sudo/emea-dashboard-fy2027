@@ -82,6 +82,12 @@
   .pill-low{background:var(--orange-lt);color:var(--orange);border:1px solid #FFCC80}
   .pill-bad{background:var(--red-lt);color:var(--red);border:1px solid #EF9A9A}
 
+  /* TTR color coding */
+  .ttr-excellent{color:#1B5E20;font-weight:700}
+  .ttr-good{color:#1565C0;font-weight:600}
+  .ttr-average{color:#E65100;font-weight:600}
+  .ttr-poor{color:#B71C1C;font-weight:700}
+
   .fade{animation:fadeIn .3s ease}
   @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 
@@ -134,6 +140,9 @@
       <b>Throughput Formula:</b><br>
       Closures ÷ 22.71 weeks<br>
       (Avg cases per week)<br><br>
+      <b>TTR Formula:</b><br>
+      sum(Age × Cases) ÷ sum(Cases)<br>
+      (Weighted average days)<br><br>
       <b>CSAT Source:</b><br>
       Case surveys only<br>
       (Chat surveys excluded)<br><br>
@@ -166,7 +175,7 @@
           <th onclick="sortBy('closed')">Closed</th>
           <th onclick="sortBy('throughput')" title="Avg cases per week = Total Closed ÷ 22.71 weeks (Feb 1 - July 10)">Throughput/wk</th>
           <th onclick="sortBy('csat')" title="Avg CSAT (1-5) — case surveys only">CSAT</th>
-          <th onclick="sortBy('ttr')" title="Avg Time-to-Resolution (days)">TTR (days)</th>
+          <th onclick="sortBy('ttr')" title="Weighted Avg Time-to-Resolution: sum(Age×Cases) / sum(Cases)">TTR (days)</th>
           <th onclick="sortBy('sla_pct')" title="% cases where initial response SLA was met">SLA%</th>
           <th onclick="sortBy('reopen_rate')" title="% cases reopened">Reopen%</th>
           <th onclick="sortBy('survey_count')" title="Total surveys received (case only)">Surveys</th>
@@ -595,7 +604,13 @@ function renderKPIs() {
   const d = getFiltered();
   const total = d.reduce((s,r)=>s+(r.closed||0),0);
   const avgCsat = d.filter(r=>r.csat>0).reduce((s,r)=>s+r.csat,0) / d.filter(r=>r.csat>0).length || 0;
-  const avgTtr  = d.reduce((s,r)=>s+(r.ttr||0),0)/d.length || 0;
+
+  // TTR Calculation: sum(Age(days)) / sum(Time To Resolve Count)
+  // This is a weighted average: sum of (TTR × closed_cases) divided by total closed cases
+  const totalAgeDays = d.reduce((s,r)=>s+((r.ttr||0)*(r.closed||0)),0);
+  const totalClosedCases = d.reduce((s,r)=>s+(r.closed||0),0);
+  const avgTtr = totalClosedCases > 0 ? totalAgeDays / totalClosedCases : 0;
+
   const avgSla  = d.reduce((s,r)=>s+(r.sla_pct||0),0)/d.length || 0;
   const avgThroughput = d.reduce((s,r)=>s+(r.throughput||0),0)/d.length || 0;
   document.getElementById('kpi-strip').innerHTML = `
@@ -632,6 +647,11 @@ function renderTable() {
       : `<span class="team-badge team-p">Prakash</span>`;
     const csat = r.csat ? r.csat.toFixed(2) : 'N/A';
     const csatColor = r.csat>=4.8?'#1B5E20':r.csat>=4.5?'#1565C0':'#B71C1C';
+
+    // TTR color coding: <7 days excellent, 7-10 good, 10-15 average, >15 poor
+    const ttrVal = r.ttr||0;
+    const ttrClass = ttrVal<7?'ttr-excellent':ttrVal<10?'ttr-good':ttrVal<15?'ttr-average':'ttr-poor';
+
     const titleShort = r.title==='Senior Technical Support Engineer'?'Senior TSE'
       :r.title==='Principal Technical Support Engineer'?'Principal SE':'TSE';
     const titleColor = r.title==='Senior Technical Support Engineer'?'#4527A0'
@@ -646,7 +666,7 @@ function renderTable() {
       <td><b>${r.closed||0}</b></td>
       <td style="font-weight:700;color:var(--blue)">${(r.throughput||0).toFixed(2)}</td>
       <td style="color:${csatColor};font-weight:600">${csat}</td>
-      <td>${(r.ttr||0).toFixed(1)}d</td>
+      <td class="${ttrClass}">${ttrVal.toFixed(1)}d</td>
       <td>${(r.sla_pct||0).toFixed(1)}%</td>
       <td style="color:${(r.reopen_rate||0)>15?'#B71C1C':(r.reopen_rate||0)>10?'#E65100':'inherit'}">${(r.reopen_rate||0).toFixed(1)}%</td>
       <td>${r.survey_count||0}</td>

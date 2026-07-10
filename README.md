@@ -32,7 +32,7 @@ Overall throughput:
 |--------|-------------|
 | **Throughput** | Avg of (weekly closures ÷ 5 working days) |
 | **CSAT** | Average rating from **case surveys only** (chat excluded) |
-| **TTR** | Time to Resolution (days) |
+| **TTR** | Time to Resolution (days) - **Weighted Average**: `sum(Age×Cases) / sum(Cases)` |
 | **SLA%** | Initial response SLA compliance |
 | **Reopen%** | Case reopen rate |
 
